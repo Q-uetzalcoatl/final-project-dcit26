@@ -1,37 +1,142 @@
-export const questions = [
+export const QUIZZES = [
   {
     id: 1,
-    question: "What hook is used to manage side effects in React?",
-    options: ["useState", "useEffect", "useContext", "useReducer"],
-    correctAnswer: 1
+    title: "Midterm Examination",
+    subject: "DCIT 26",
+    descrption: "Application Development and Emerging Technologies",
+    duration: 60,
+    password: "dcit", // Password for this quiz
+    questions: [
+      {
+        id: 1,
+        question: "What is the primary purpose of React?",
+        options: ["Database management", "Building User Interfaces", "Server-side Logic", "Operating System"],
+        correct: 1
+      },
+      {
+        id: 2,
+        question: "Which hook is used for handling side effects like data fetching",
+        options: ["useState", "useEffect", "useContext", "useReducer"],
+        correct: 1
+      },
+      {
+        id: 3,
+        question: "What syntax extension does React use to describe UI?",
+        options: ["HTML", "XML", "JSX", "Java"],
+        correct: 2
+      },
+      {
+        id: 4,
+        question: "Which command creates a new Vite project?",
+        options: ["npm create vite@latest", "npm start react", "node install vite", "git clone vite"],
+        correct:0
+      },
+      {
+        id: 5,
+        question: "What is Tailwind CSS?",
+        options: ["A JavaScript Frameword", "A Database", "A Utility-First CSS Frameword", "A Backend Server"],
+        correct: 2
+      },
+      {
+        id: 6,
+        question: "Which hook is used to store and update values in a component?",
+        options: ["useEffect", "useState", "useHistory", "useCallback"],
+        correct: 1
+      },
+      {
+        id: 7,
+        question: "In React, what is a 'Component'?",
+        options: ["A database", "A reusable piece of UI", "A function that runs on the server", "A CSS file"],
+        correct: 1
+      },
+      {
+        id: 8,
+        question: "What does SPA stand for in web development?",
+        options: ["Single Page Application", "Standard Protocol API", "Simple Program Access", "Server Port Address"],
+        correct: 0
+      },
+      {
+        id: 9,
+        question: "Which file usually contains the global styles for the app?",
+        options: ["main.jsx", "App.jsx", "index.css", "package.json"],
+        correct: 2
+      },
+      {
+        id: 10,
+        question: "What is the purpose of 'npm install'?",
+        options: ["To run the server", "To delete the project", "To download dependencies listed in package.json", "To publish the website"],
+        correct: 2
+      }
+    ]
   },
   {
     id: 2,
-    question: "Which method is used to update state in a class component?",
-    options: ["this.updateState()", "this.setState()", "this.changeState()", "this.modifyState()"],
-    correctAnswer: 1
-  },
-  {
-    id: 3,
-    question: "What does JSX stand for?",
-    options: ["JavaScript XML", "Java Syntax Extension", "JavaScript Extension", "Java XML"],
-    correctAnswer: 0
-  },
-  {
-    id: 4,
-    question: "What is the virtual DOM in React?",
-    options: [
-      "A real DOM copy stored in memory",
-      "A lightweight representation of the real DOM",
-      "A database for React components",
-      "A styling framework"
-    ],
-    correctAnswer: 1
-  },
-  {
-    id: 5,
-    question: "Which hook allows you to access context in functional components?",
-    options: ["useContext", "useState", "useRef", "useMemo"],
-    correctAnswer: 0
+    title: "Final Project Quiz",
+    subject: "IT 101",
+    description: "Introduction to Computing (True or False)",
+    duration: 45,
+    password: "cvsu", // Password for this quiz
+    question:[
+      {
+        id: 1,
+        question: "HTML is considered a programming language.",
+        options: ["True", "False"],
+        correct: 1
+      },
+      {
+        id: 2,
+        question: "The CPU is often referred to as the brain of the computer.",
+        options: ["True", "False"],
+        correct: 0
+      },
+      {
+        id: 3,
+        question: "RAM stores data permanently, even when the computer is turned off.",
+        options: ["True", "False"],
+        correct: 1
+      },
+      {
+        id: 4,
+        question: "SSD (Solid State Drive) is generally faster than a traditional HDD (Hard Disk Drive).",
+        options: ["True", "False"],
+        correct: 0
+      },
+      {
+        id: 5,
+        question: "1 Byte is equal to 8 Bits.",
+        options: ["True", "False"],
+        correct: 0
+      },
+      {
+        id: 6,
+        queston: "Linux is an example of an open-source Operating System.",
+        options: ["True", "False"],
+        correct: 0
+      },
+      {
+        id: 7,
+        question: "HTTP is more secure than HTTPS.",
+        options: ["True", "False"],
+        correct: 1
+      },
+      {
+        id: 8,
+        question: "Python is a high-level programming language",
+        options: ["True", "False"],
+        correct: 0
+      },
+      {
+        id: 9,
+        question: "A monitor is an Input device",
+        options: ["True", "False"],
+        correct: 1
+      },
+      {
+        id: 10,
+        question: "Cloud compting requires an internet connection to access data.",
+        options: ["True", "False"],
+        correct:0
+      }
+    ]
   }
 ];
