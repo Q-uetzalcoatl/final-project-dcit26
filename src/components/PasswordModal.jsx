@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; //important
+import React, { useState } from 'react'; 
 import { Lock } from 'lucide-react';
 
 const PasswordModal = ({ quiz, onSuccess, onBack }) => {
