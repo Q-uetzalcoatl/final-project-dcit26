@@ -95,7 +95,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
   };
 
   return (
-    <div className="w-full max-w-4xl relative">
+    <div className="w-full max-w-3xl relative mx-auto">
       
       {/* WARNING POPUP */}
       {showWarning && (
@@ -121,7 +121,9 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
       )}
 
       {/* Floating Header */}
-      <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex justify-between items-center sticky top-4 z-40 border-l-4 border-emerald-500">
+      <div className="bg-white/95 backdrop-blur p-4 rounded-2xl shadow-lg mb-6
+                flex justify-between items-center sticky top-4 z-40
+                border-l-4 border-emerald-500">
         <div>
           <h2 className="font-bold text-gray-900 text-lg">{quiz.title}</h2>
           <p className="text-xs text-gray-500">Attempting as: {studentName}</p>
@@ -135,8 +137,8 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
       <div className="bg-white rounded-xl shadow-lg p-8">
         <div className="space-y-8">
           {quiz.questions.map((q, index) => (
-            <div key={q.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-              <h3 className="font-semibold text-lg mb-4 flex gap-2">
+            <div key={q.id} className="p-6 bg-gray-50 rounded-xl border border-gray-200">
+              <h3 className="font-semibold text-lg leading-relaxed mb-4 flex gap-2">
                 <span className="text-emerald-600 font-bold">{index + 1}.</span> 
                 {q.question}
               </h3>
@@ -148,7 +150,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
                     className={`w-full text-left p-3 rounded-lg border transition-all flex items-center ${
                       answers[q.id] === i 
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-900 font-medium ring-1 ring-emerald-500' 
-                        : 'bg-white border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                        : 'bg-white border-gray-200 hover:bg-emerald-50 hover:border-emerald-300'
                     }`}
                   >
                     <div className={`w-4 h-4 rounded-full border mr-3 flex items-center justify-center ${answers[q.id] === i ? 'border-emerald-600 bg-emerald-600' : 'border-gray-400'}`}>
@@ -162,7 +164,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
           ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t flex justify-between items-center">
+        <div className="mt-10 pt-6 border-t flex justify-between items-center">
           <div className="text-sm text-gray-500">
             Questions Answered: {Object.keys(answers).length} / {quiz.questions.length}
           </div>
