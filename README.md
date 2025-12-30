@@ -32,7 +32,7 @@ A secure, web-based examination portal developed for **DCIT 26 (Application Deve
 
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/YourUsername/final-project-dcit26.git](https://github.com/YourUsername/final-project-dcit26.git)
+    git clone [https://github.com/Q-uetzalcoatl/final-project-dcit26.git](https://github.com/Q-uetzalcoatl/final-project-dcit26.git)
     cd final-project-dcit26
     ```
 
@@ -75,9 +75,10 @@ Since this project uses a mock database structure for demonstration purposes, us
 
 ## 👥 Group Members
 
-* **Nathaniel M. Abaya** - Lead Developer
+* **[Nathaniel M. Abaya]** - Lead Developer
 * **[Carl Andrey E. Damayo]** - Content Manager
 * **[Rhayzel Ann Joy B. Aquino]** - UI/UX Designer
-* **[Devieth Joshua M. Anto and Rodrigo Victor M. Beltran]** - Documentation
-* **[John Gabriel C.Perjes]** - Quality Analyst 
+* **[Devieth Joshua M. Anto]** - Documentation
+* **[Rodrigo Victor M. Beltran]** - Documentation
+* **[John Gabriel C.Perjes]** - Quality Assurance 
 
