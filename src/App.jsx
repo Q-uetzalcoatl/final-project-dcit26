@@ -99,7 +99,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-emerald-50 text-emerald-900 font-sans selection:bg-yellow-200">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-yellow-50 text-emerald-900 font-sans selection:bg-yellow-200">
         {notification && (
           <div className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-xl border-l-4 animate-bounce
             ${notification.type === 'error' ? 'bg-red-100 border-red-500 text-red-900' : 'bg-yellow-100 border-yellow-500 text-yellow-900'}
@@ -133,20 +133,41 @@ export default function App() {
           )}
         </header>
 
-        <main className="container mx-auto p-4 md:p-8 flex flex-col items-center">
-          {view === 'login' && <LoginPage onLogin={handleLogin} notify={showNotification} />}
-          {view === 'dashboard' && <QuizSelectionPage onSelectQuiz={handleSelectQuiz} quizzes={QUIZZES} studentName={studentName} />}
-          {view === 'quiz_password' && <PasswordModal quiz={QUIZZES.find(q => q.id === activeQuizId)} onSuccess={handlePasswordSuccess} onBack={() => setView('dashboard')} />}
-          {view === 'quiz' && (
-            <StudentQuizPage 
+        <main className="container mx-auto p-4 md:p-8 flex flex-col items-center justify-center">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-6 md:p-8">
+            {view === 'dashboard' && (
+              <QuizSelectionPage 
+                onSelectQuiz={handleSelectQuiz} 
+                quizzes={QUIZZES} 
+                studentName={studentName} 
+                />
+              )}
+
+          {view === 'quiz_password' && (
+            <PasswordModal 
               quiz={QUIZZES.find(q => q.id === activeQuizId)} 
-              studentName={studentName} 
-              onComplete={() => setView('waiting')}
-              notify={showNotification}
+              onSuccess={handlePasswordSuccess} 
+              onBack={() => setView('dashboard')} 
+              />
+            )}
+
+        {view === 'quiz' && (
+          <StudentQuizPage 
+            quiz={QUIZZES.find(q => q.id === activeQuizId)} 
+            studentName={studentName} 
+            onComplete={() => setView('waiting')}
+            notify={showNotification}
             />
           )}
-          {view === 'waiting' && <ResultPendingPage studentName={studentName} quizId={activeQuizId} onBack={() => setView('dashboard')} />}
-          {view === 'admin' && <AdminDashboard />}
+
+        {view === 'waiting' && (
+          <ResultPendingPage 
+            studentName={studentName} 
+            quizId={activeQuizId} 
+            onBack={() => setView('dashboard')} 
+          />
+        )}
+          </div>
         </main>
       </div>
     </BrowserRouter>
