@@ -133,42 +133,46 @@ export default function App() {
           )}
         </header>
 
-        <main className="container mx-auto p-4 md:p-8 flex flex-col items-center justify-center">
-          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            {view === 'dashboard' && (
-              <QuizSelectionPage 
-                onSelectQuiz={handleSelectQuiz} 
-                quizzes={QUIZZES} 
-                studentName={studentName} 
-                />
+        <main className="container mx-auto p-4 md:p-8 flex flex-col items-center">
+          {view === 'login' && (
+            <LoginPage onLogin={handleLogin} notify={showNotification} />
               )}
 
-          {view === 'quiz_password' && (
-            <PasswordModal 
-              quiz={QUIZZES.find(q => q.id === activeQuizId)} 
-              onSuccess={handlePasswordSuccess} 
-              onBack={() => setView('dashboard')} 
-              />
-            )}
-
-        {view === 'quiz' && (
-          <StudentQuizPage 
-            quiz={QUIZZES.find(q => q.id === activeQuizId)} 
-            studentName={studentName} 
-            onComplete={() => setView('waiting')}
-            notify={showNotification}
+          {view === 'dashboard' && (
+            <QuizSelectionPage
+              onSelectQuiz={handleSelectQuiz}
+              quizzes={QUIZZES}
+              studentName={studentName}
             />
           )}
 
-        {view === 'waiting' && (
-          <ResultPendingPage 
-            studentName={studentName} 
-            quizId={activeQuizId} 
-            onBack={() => setView('dashboard')} 
+          {view === 'quiz_password' && (
+            <PasswordModal
+              quiz={QUIZZES.find(q => q.id === activeQuizId)}
+              onSuccess={handlePasswordSuccess}
+              onBack={() => setView('dashboard')}
+            />
+          )}
+
+        {view === 'quiz' && (
+          <StudentQuizPage
+            quiz={QUIZZES.find(q => q.id === activeQuizId)}
+            studentName={studentName}
+            onComplete={() => setView('waiting')}
+            notify={showNotification}
           />
         )}
-          </div>
-        </main>
+
+        {view === 'waiting' && (
+          <ResultPendingPage
+            studentName={studentName}
+            quizId={activeQuizId}
+            onBack={() => setView('dashboard')}
+          />
+        )}
+
+        {view === 'admin' && <AdminDashboard />}
+      </main>
       </div>
     </BrowserRouter>
   );
