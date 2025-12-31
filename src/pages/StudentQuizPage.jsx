@@ -1,29 +1,38 @@
-/* ========
-delete this
-========
-*/
 import React, { useState, useEffect, useRef } from 'react';
 import { Timer, AlertTriangle, ChevronRight, CheckCircle } from 'lucide-react';
 
+/**
+ * STUDENT QUIZ PAGE COMPONENT
+ * Handles the main examination interface including:
+ * 1. Real-time countdown timer
+ * 2. Anti-cheat detection (Tab switching)
+ * 3. One-question-at-a-time navigation
+ * 4. Automatic submission on violations or timeout
+ */
 const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
+  // STATE MANAGEMENT
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(quiz.duration * 60); 
+  const [timeLeft, setTimeLeft] = useState(quiz.duration * 60); // Convert mins to seconds
   const [violations, setViolations] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
   
+  // Ref to track exact start time for duration calculation
   const startTimeRef = useRef(Date.now());
+
+  // Helper variables for UI rendering
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
   const hasAnsweredCurrent = answers[currentQuestion.id] !== undefined;
 
-  // TIMER LOGIC
+  // --- EFFECT: COUNTDOWN TIMER ---
+  // Decrements time every second and triggers auto-submit when time hits 0
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit(); 
+          handleSubmit(); // Auto-submit action
           return 0;
         }
         return prev - 1;
@@ -32,12 +41,14 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // ANTI-CHEAT (TAB SWITCHING)
+  // --- EFFECT: ANTI-CHEAT SECURITY ---
+  // Listens for visibility changes (tab switching/minimizing)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         setViolations((prev) => {
           const newCount = prev + 1;
+          // STRICT RULE: 5 Violations = Instant Fail/Submit
           if (newCount >= 5) {
             handleSubmit();
           } else {
@@ -51,10 +62,11 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
+  // Helper to format seconds into MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return ${mins}:${secs.toString().padStart(2, '0')};
   };
 
   const handleOptionSelect = (qId, optionIndex) => {
@@ -71,7 +83,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
   };
 
   const handleSubmit = () => {
-    // Calculate Score
+    // 1. Calculate Score based on correct answers
     let score = 0;
     quiz.questions.forEach(q => {
       if (answers[q.id] === q.correct) {
@@ -79,12 +91,14 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
       }
     });
 
+    // 2. Calculate Total Time Spent
     const endTime = Date.now();
     const durationMs = endTime - startTimeRef.current;
     const minutes = Math.floor(durationMs / 60000);
     const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-    const timeSpentString = `${minutes}m ${seconds}s`;
+    const timeSpentString = ${minutes}m ${seconds}s;
 
+    // 3. Save Attempt Data to LocalStorage (Mock Database)
     const resultData = {
       studentName,
       quizId: quiz.id,
@@ -103,13 +117,13 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     onComplete();
   };
 
-  // Progress Bar Calculation
+  // Calculate percentage for progress bar
   const progressPercentage = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
     <div className="w-full max-w-3xl relative mx-auto">
       
-      {/* WARNING POPUP */}
+      {/* SECURITY WARNING MODAL */}
       {showWarning && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm text-center border-4 border-red-500 animate-pulse">
@@ -130,7 +144,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
         </div>
       )}
 
-      {/* Floating Header */}
+      {/* STICKY HEADER: Title, Progress, and Timer */}
       <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex justify-between items-center sticky top-4 z-40 border-l-4 border-emerald-500">
         <div>
           <h2 className="font-bold text-gray-900 text-lg">{quiz.title}</h2>
@@ -138,7 +152,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-emerald-500 transition-all duration-300" 
-                  style={{ width: `${progressPercentage}%` }}
+                  style={{ width: ${progressPercentage}% }}
                 />
              </div>
              <span className="text-xs text-gray-500">
@@ -146,13 +160,15 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
              </span>
           </div>
         </div>
+        
+        {/* Timer Display - Turns red when under 5 minutes */}
         <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold text-xl ${timeLeft < 300 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
           <Timer className="w-5 h-5" />
           {formatTime(timeLeft)}
         </div>
       </div>
 
-      {/* Question Card (ONE QUESTION AT A TIME) */}
+      {/* QUESTION CARD */}
       <div className="bg-white rounded-xl shadow-lg p-8 min-h-[400px] flex flex-col justify-between">
         <div>
             <h3 className="font-semibold text-xl mb-6 text-gray-800">
@@ -184,7 +200,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
             </div>
         </div>
 
-        {/* Navigation Buttons */}
+        {/* CONTROLS: Next / Submit */}
         <div className="mt-8 pt-6 border-t flex justify-end">
           {isLastQuestion ? (
             <button
