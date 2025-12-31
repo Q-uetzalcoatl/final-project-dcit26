@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { User, Lock, Shield, GraduationCap, CreditCard } from 'lucide-react';
 import { STUDENTS, ADMIN_CREDENTIALS } from '../data/users';
 
+/**
+ * LOGIN PAGE COMPONENT
+ * Handles dual-role authentication (Student vs Instructor).
+ * Validates credentials against the mock database in 'src/data/users.js'.
+ */
 const LoginPage = ({ onLogin, notify }) => {
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  // STATE MANAGEMENT
+  const [isAdminMode, setIsAdminMode] = useState(false); // Toggles between Student/Admin view
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [studentId, setStudentId] = useState('');
@@ -11,9 +17,11 @@ const LoginPage = ({ onLogin, notify }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); // Reset error state on new attempt
 
     if (isAdminMode) {
+      // --- ADMIN AUTHENTICATION ---
+      // strictly checks email and password against hardcoded admin credentials
       if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
         onLogin('Admin');
       } else {
@@ -21,6 +29,8 @@ const LoginPage = ({ onLogin, notify }) => {
         notify('Login Failed', 'error');
       }
     } else {
+      // --- STUDENT AUTHENTICATION ---
+      // Searches for a matching record in the STUDENTS array
       const foundStudent = STUDENTS.find(
         s => s.email.toLowerCase() === email.toLowerCase() && s.studentId === studentId
       );
@@ -36,6 +46,8 @@ const LoginPage = ({ onLogin, notify }) => {
 
   return (
     <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 mt-10">
+      
+      {/* HEADER SECTION: Icon and Title change based on mode */}
       <div className="text-center mb-8">
         <div className="mx-auto h-12 w-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
           {isAdminMode ? <Shield className="h-6 w-6 text-emerald-600" /> : <GraduationCap className="h-6 w-6 text-emerald-600" />}
@@ -48,6 +60,7 @@ const LoginPage = ({ onLogin, notify }) => {
         </p>
       </div>
 
+      {/* MODE TOGGLE SWITCH */}
       <div className="flex bg-gray-100 p-1 rounded-lg mb-8">
         <button
           type="button"
@@ -65,9 +78,12 @@ const LoginPage = ({ onLogin, notify }) => {
         </button>
       </div>
 
+      {/* LOGIN FORM */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Error Feedback */}
         {error && <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center">{error}</div>}
 
+        {/* Email Field (Common to both) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
           <div className="relative">
@@ -85,6 +101,7 @@ const LoginPage = ({ onLogin, notify }) => {
           </div>
         </div>
 
+        {/* CONDITIONAL FIELDS: Password (Admin) vs Student ID (Student) */}
         {isAdminMode ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
