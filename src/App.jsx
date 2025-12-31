@@ -1,11 +1,11 @@
+/* ========
+delete this
+========
+*/
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AlertTriangle, LogOut } from 'lucide-react';
-
-// Import Data
 import { QUIZZES } from './data/quizzes';
-
-// Import Pages
 import LoginPage from './pages/LoginPage';
 import QuizSelectionPage from './pages/QuizSelectionPage';
 import StudentQuizPage from './pages/StudentQuizPage';
@@ -19,7 +19,6 @@ export default function App() {
   const [activeQuizId, setActiveQuizId] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Initialize from sessionStorage (Tab Specific)
   useEffect(() => {
     const savedName = sessionStorage.getItem('cvsu_student_name');
     const savedView = sessionStorage.getItem('cvsu_current_view');
@@ -35,7 +34,6 @@ export default function App() {
     }
   }, []);
 
-  // Save State to sessionStorage
   useEffect(() => {
     if (view !== 'login') sessionStorage.setItem('cvsu_current_view', view);
     if (activeQuizId) sessionStorage.setItem('cvsu_active_quiz', activeQuizId);
@@ -54,8 +52,6 @@ export default function App() {
   };
 
   const handleSelectQuiz = (quizId) => {
-    // Note: Results should still use localStorage so they persist across reloads/sessions
-    // Otherwise, restarting the browser would delete all student grades!
     const allResults = JSON.parse(localStorage.getItem('cvsu_db_results') || '[]');
     const existingAttempt = allResults.find(r => r.studentName === studentName && r.quizId === quizId);
 
@@ -85,7 +81,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    sessionStorage.clear(); // Clears only this tab
+    sessionStorage.clear();
     setStudentName('');
     setActiveQuizId(null);
     setView('login');
@@ -99,7 +95,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-yellow-50 text-emerald-900 font-sans selection:bg-yellow-200">
+      <div className="min-h-screen bg-emerald-50 text-emerald-900 font-sans selection:bg-yellow-200">
         {notification && (
           <div className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-xl border-l-4 animate-bounce
             ${notification.type === 'error' ? 'bg-red-100 border-red-500 text-red-900' : 'bg-yellow-100 border-yellow-500 text-yellow-900'}
@@ -114,66 +110,49 @@ export default function App() {
         {/* Header */}
         <header className="bg-emerald-700 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-40">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-emerald-900 font-bold text-lg shadow-sm">CVSU</div>
+             {/* LOGO UPDATE: Replaced text div with actual image */}
+             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden p-0.5">
+                <img src="/cvsulogo.png" alt="CvSU" className="w-full h-full object-cover" />
+             </div>
              <div>
-               <h1 className="text-lg font-bold leading-none">CvSU Portal</h1>
-               <span className="text-xs text-emerald-200 opacity-80">Online Examination System</span>
+               <h1 className="text-lg font-bold leading-none tracking-wide">CvSU Portal</h1>
+               <span className="text-xs text-emerald-100 opacity-90 font-medium">Online Examination System</span>
              </div>
           </div>
+          
           {studentName && (
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex flex-col items-end">
                   <span className="text-xs text-emerald-200">Logged in as</span>
                   <span className="font-bold text-white text-sm">{studentName}</span>
               </div>
-              <button onClick={handleLogout} className="bg-emerald-800 hover:bg-emerald-900 p-2 rounded-lg transition-colors border border-emerald-600" title="Logout">
-                <LogOut className="w-4 h-4" />
-              </button>
+              
+              {/* LOGOUT SECURITY FIX: Hidden during quiz */}
+              {view !== 'quiz' && (
+                <button onClick={handleLogout} className="bg-emerald-800 hover:bg-emerald-900 p-2 rounded-lg transition-colors border border-emerald-600" title="Logout">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
         </header>
 
         <main className="container mx-auto p-4 md:p-8 flex flex-col items-center">
-          {view === 'login' && (
-            <LoginPage onLogin={handleLogin} notify={showNotification} />
-              )}
-
-          {view === 'dashboard' && (
-            <QuizSelectionPage
-              onSelectQuiz={handleSelectQuiz}
-              quizzes={QUIZZES}
-              studentName={studentName}
+          {view === 'login' && <LoginPage onLogin={handleLogin} notify={showNotification} />}
+          {view === 'dashboard' && <QuizSelectionPage onSelectQuiz={handleSelectQuiz} quizzes={QUIZZES} studentName={studentName} />}
+          {view === 'quiz_password' && <PasswordModal quiz={QUIZZES.find(q => q.id === activeQuizId)} onSuccess={handlePasswordSuccess} onBack={() => setView('dashboard')} />}
+          {view === 'quiz' && (
+            <StudentQuizPage 
+              quiz={QUIZZES.find(q => q.id === activeQuizId)} 
+              studentName={studentName} 
+              onComplete={() => setView('waiting')}
+              notify={showNotification}
             />
           )}
-
-          {view === 'quiz_password' && (
-            <PasswordModal
-              quiz={QUIZZES.find(q => q.id === activeQuizId)}
-              onSuccess={handlePasswordSuccess}
-              onBack={() => setView('dashboard')}
-            />
-          )}
-
-        {view === 'quiz' && (
-          <StudentQuizPage
-            quiz={QUIZZES.find(q => q.id === activeQuizId)}
-            studentName={studentName}
-            onComplete={() => setView('waiting')}
-            notify={showNotification}
-          />
-        )}
-
-        {view === 'waiting' && (
-          <ResultPendingPage
-            studentName={studentName}
-            quizId={activeQuizId}
-            onBack={() => setView('dashboard')}
-          />
-        )}
-
-        {view === 'admin' && <AdminDashboard />}
-      </main>
+          {view === 'waiting' && <ResultPendingPage studentName={studentName} quizId={activeQuizId} onBack={() => setView('dashboard')} />}
+          {view === 'admin' && <AdminDashboard />}
+        </main>
       </div>
     </BrowserRouter>
   );
-    }
+              }
