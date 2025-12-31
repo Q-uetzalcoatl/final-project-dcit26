@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Timer, AlertTriangle, ChevronRight, CheckCircle } from 'lucide-react';
 
@@ -67,7 +66,6 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    // FIX IS HERE: Added backticks around the string
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
