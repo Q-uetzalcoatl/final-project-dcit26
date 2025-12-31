@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Timer, AlertTriangle, ChevronRight, CheckCircle } from 'lucide-react';
 
@@ -66,7 +67,8 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return ${mins}:${secs.toString().padStart(2, '0')};
+    // FIX IS HERE: Added backticks around the string
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleOptionSelect = (qId, optionIndex) => {
@@ -96,7 +98,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     const durationMs = endTime - startTimeRef.current;
     const minutes = Math.floor(durationMs / 60000);
     const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-    const timeSpentString = ${minutes}m ${seconds}s;
+    const timeSpentString = `${minutes}m ${seconds}s`;
 
     // 3. Save Attempt Data to LocalStorage (Mock Database)
     const resultData = {
@@ -152,7 +154,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-emerald-500 transition-all duration-300" 
-                  style={{ width: ${progressPercentage}% }}
+                  style={{ width: `${progressPercentage}%` }}
                 />
              </div>
              <span className="text-xs text-gray-500">
