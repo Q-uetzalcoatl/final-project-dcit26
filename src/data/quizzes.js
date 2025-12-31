@@ -1,21 +1,21 @@
 export const QUIZZES = [
   {
     id: 1,
-    title: "Midterm Examination",
+    title: "DCIT 26 Multiple Choice Quiz",
     subject: "DCIT 26",
-    descrption: "Application Development and Emerging Technologies",
-    duration: 60,
+    description: "Application Development and Emerging Technologies",
+    duration: 20,
     password: "dcit", // Password for this quiz
     questions: [
       {
         id: 1,
         question: "What is the primary purpose of React?",
-        options: ["Database management", "Building User Interfaces", "Server-side Logic", "Operating System"],
+        options: ["Database Management", "Building User Interfaces", "Server-Side Logic", "Operating System"],
         correct: 1
       },
       {
         id: 2,
-        question: "Which hook is used for handling side effects like data fetching",
+        question: "Which hook is used for handling side effects like data fetching?",
         options: ["useState", "useEffect", "useContext", "useReducer"],
         correct: 1
       },
@@ -29,12 +29,12 @@ export const QUIZZES = [
         id: 4,
         question: "Which command creates a new Vite project?",
         options: ["npm create vite@latest", "npm start react", "node install vite", "git clone vite"],
-        correct:0
+        correct: 0
       },
       {
         id: 5,
         question: "What is Tailwind CSS?",
-        options: ["A JavaScript Frameword", "A Database", "A Utility-First CSS Frameword", "A Backend Server"],
+        options: ["A JavaScript Framework", "A Database", "A Utility-First CSS Framework", "A Backend Server"],
         correct: 2
       },
       {
@@ -46,7 +46,7 @@ export const QUIZZES = [
       {
         id: 7,
         question: "In React, what is a 'Component'?",
-        options: ["A database", "A reusable piece of UI", "A function that runs on the server", "A CSS file"],
+        options: ["A database table", "A reusable piece of UI", "A function that runs on the server", "A CSS file"],
         correct: 1
       },
       {
@@ -71,12 +71,12 @@ export const QUIZZES = [
   },
   {
     id: 2,
-    title: "Final Project Quiz",
+    title: "True or False IT Quiz",
     subject: "IT 101",
-    description: "Introduction to Computing (True or False)",
-    duration: 45,
+    description: "Introduction to Computing",
+    duration: 15,
     password: "cvsu", // Password for this quiz
-    question:[
+    questions: [
       {
         id: 1,
         question: "HTML is considered a programming language.",
@@ -109,7 +109,7 @@ export const QUIZZES = [
       },
       {
         id: 6,
-        queston: "Linux is an example of an open-source Operating System.",
+        question: "Linux is an example of an open-source Operating System.",
         options: ["True", "False"],
         correct: 0
       },
@@ -121,21 +121,21 @@ export const QUIZZES = [
       },
       {
         id: 8,
-        question: "Python is a high-level programming language",
+        question: "Python is a high-level programming language.",
         options: ["True", "False"],
         correct: 0
       },
       {
         id: 9,
-        question: "A monitor is an Input device",
+        question: "A monitor is an Input device.",
         options: ["True", "False"],
         correct: 1
       },
       {
         id: 10,
-        question: "Cloud compting requires an internet connection to access data.",
+        question: "Cloud computing requires an internet connection to access data.",
         options: ["True", "False"],
-        correct:0
+        correct: 0
       }
     ]
   }
