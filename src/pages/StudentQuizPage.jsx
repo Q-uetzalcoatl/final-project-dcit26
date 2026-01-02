@@ -50,7 +50,8 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
           const newCount = prev + 1;
           // STRICT RULE: 5 Violations = Instant Fail/Submit
           if (newCount >= 5) {
-            handleSubmit();
+            // FIX: Pass the new count directly to submit so it saves '5' immediately
+            handleSubmit(newCount);
           } else {
             setShowWarning(true);
           }
@@ -82,7 +83,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (finalViolations = null) => {
     // 1. Calculate Score based on correct answers
     let score = 0;
     quiz.questions.forEach(q => {
@@ -98,7 +99,10 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
     const seconds = ((durationMs % 60000) / 1000).toFixed(0);
     const timeSpentString = `${minutes}m ${seconds}s`;
 
-    // 3. Save Attempt Data to LocalStorage (Mock Database)
+    // 3. Determine correct violation count (Use argument if provided, otherwise use state)
+    const recordedViolations = finalViolations !== null ? finalViolations : violations;
+
+    // 4. Save Attempt Data to LocalStorage (Mock Database)
     const resultData = {
       studentName,
       quizId: quiz.id,
@@ -107,7 +111,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
       released: false,
       timestamp: new Date().toISOString(),
       timeSpent: timeSpentString,
-      violations: violations
+      violations: recordedViolations // Use the corrected count
     };
 
     const existingResults = JSON.parse(localStorage.getItem('cvsu_db_results') || '[]');
@@ -204,7 +208,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
         <div className="mt-8 pt-6 border-t flex justify-end">
           {isLastQuestion ? (
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()} 
               disabled={!hasAnsweredCurrent}
               className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold shadow-lg transition-all ${
                 hasAnsweredCurrent 
