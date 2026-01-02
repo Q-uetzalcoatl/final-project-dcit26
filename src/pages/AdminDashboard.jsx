@@ -98,7 +98,7 @@ const AdminDashboard = () => {
                     <Clock className="w-3 h-3" /> {r.timeSpent || 'N/A'}
                   </td>
                   <td className="p-4">
-                    {/* Display Warning Icon if violations exist */}
+                    {/* LOGIC: Only show if violations is GREATER THAN 0 */}
                     {r.violations > 0 ? (
                       <span className="text-red-600 font-bold flex items-center gap-1 text-xs bg-red-50 px-2 py-1 rounded">
                         <AlertTriangle className="w-3 h-3" /> {r.violations}
