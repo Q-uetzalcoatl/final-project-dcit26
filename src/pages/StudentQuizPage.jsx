@@ -8,22 +8,78 @@ import { Timer, AlertTriangle, ChevronRight, CheckCircle } from 'lucide-react';
  * 2. Anti-cheat detection (Tab switching)
  * 3. One-question-at-a-time navigation
  * 4. Automatic submission on violations or timeout
+ * * @param {Object} quiz - The quiz object containing questions and settings
+ * @param {string} studentName - The ID/Name of the current student
+ * @param {Function} onComplete - Callback to trigger when exam is finished
  */
-const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
+const StudentQuizPage = ({ quiz, studentName, onComplete }) => {
+  
+  // --- GUIDE: SESSION RECOVERY LOGIC ---
+  // This function prevents data loss if the student reloads the page.
+  // It checks LocalStorage for an interrupted session.
+  const loadSavedSession = () => {
+    try {
+      const saved = localStorage.getItem('cvsu_active_quiz_session');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Session load error", e);
+    }
+    return null;
+  };
+
+  const savedSession = loadSavedSession();
+  
+  // GUIDE: INITIALIZATION
+  // We determine if this is a fresh start (from props) or a recovery (from saved session).
+  const activeQuiz = quiz || (savedSession ? savedSession.quizData : null);
+  const activeStudent = studentName || (savedSession ? savedSession.studentName : null);
+
   // STATE MANAGEMENT
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(quiz.duration * 60); // Convert mins to seconds
-  const [violations, setViolations] = useState(0);
+  // We initialize state with saved values if they exist, otherwise default to 0.
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(savedSession?.currentIndex || 0);
+  const [answers, setAnswers] = useState(savedSession?.answers || {});
+  const [timeLeft, setTimeLeft] = useState(savedSession?.timeLeft || (activeQuiz ? activeQuiz.duration * 60 : 0));
+  const [violations, setViolations] = useState(savedSession?.violations || 0);
   const [showWarning, setShowWarning] = useState(false);
   
-  // Ref to track exact start time for duration calculation
   const startTimeRef = useRef(Date.now());
 
-  // Helper variables for UI rendering
-  const currentQuestion = quiz.questions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
-  const hasAnsweredCurrent = answers[currentQuestion.id] !== undefined;
+  // --- CRITICAL FIX: PREVENT WHITE SCREEN ---
+  // If data is missing (e.g. forced reload without save), show a safe return screen.
+  if (!activeQuiz || !activeStudent) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 text-center p-6">
+        <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900">Session Lost</h2>
+        <p className="text-gray-600 mb-6">
+          The exam data could not be recovered. Please return to the dashboard.
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  }
+
+  // --- EFFECT: AUTO-SAVE SESSION ---
+  // Saves the exam state every time the user answers or time changes.
+  useEffect(() => {
+    const sessionData = {
+      quizData: activeQuiz,
+      studentName: activeStudent,
+      currentIndex: currentQuestionIndex,
+      answers: answers,
+      timeLeft: timeLeft,
+      violations: violations,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('cvsu_active_quiz_session', JSON.stringify(sessionData));
+  }, [timeLeft, answers, currentQuestionIndex, violations]);
 
   // --- EFFECT: COUNTDOWN TIMER ---
   // Decrements time every second and triggers auto-submit when time hits 0
@@ -50,8 +106,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
           const newCount = prev + 1;
           // STRICT RULE: 5 Violations = Instant Fail/Submit
           if (newCount >= 5) {
-            // FIX: Pass the new count directly to submit so it saves '5' immediately
-            handleSubmit(newCount);
+            handleSubmit(newCount); // Fix: Pass count directly
           } else {
             setShowWarning(true);
           }
@@ -78,51 +133,56 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
+    if (currentQuestionIndex < activeQuiz.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
+  // --- GUIDE: SUBMISSION HANDLER ---
+  // Calculates score, clears session storage, and saves result to DB.
   const handleSubmit = (finalViolations = null) => {
-    // 1. Calculate Score based on correct answers
+    // 1. Clear the saved session so they can't reload back into a finished exam
+    localStorage.removeItem('cvsu_active_quiz_session');
+
+    // 2. Calculate Score based on correct answers
     let score = 0;
-    quiz.questions.forEach(q => {
+    activeQuiz.questions.forEach(q => {
       if (answers[q.id] === q.correct) {
         score++;
       }
     });
 
-    // 2. Calculate Total Time Spent
-    const endTime = Date.now();
-    const durationMs = endTime - startTimeRef.current;
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-    const timeSpentString = `${minutes}m ${seconds}s`;
+    // 3. Calculate Total Time Spent
+    const minutesSpent = activeQuiz.duration - Math.floor(timeLeft / 60);
+    const timeSpentString = `${minutesSpent}m`;
 
-    // 3. Determine correct violation count (Use argument if provided, otherwise use state)
+    // 4. Determine correct violation count
     const recordedViolations = finalViolations !== null ? finalViolations : violations;
 
-    // 4. Save Attempt Data to LocalStorage (Mock Database)
+    // 5. Save Attempt Data to LocalStorage (Mock Database)
     const resultData = {
-      studentName,
-      quizId: quiz.id,
+      studentName: activeStudent,
+      quizId: activeQuiz.id,
       score,
-      total: quiz.questions.length,
+      total: activeQuiz.questions.length,
       released: false,
       timestamp: new Date().toISOString(),
       timeSpent: timeSpentString,
-      violations: recordedViolations // Use the corrected count
+      violations: recordedViolations
     };
 
     const existingResults = JSON.parse(localStorage.getItem('cvsu_db_results') || '[]');
     existingResults.push(resultData);
     localStorage.setItem('cvsu_db_results', JSON.stringify(existingResults));
 
-    onComplete();
+    if(onComplete) onComplete();
   };
 
-  // Calculate percentage for progress bar
-  const progressPercentage = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+  // Helper variables for UI rendering
+  const currentQuestion = activeQuiz.questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === activeQuiz.questions.length - 1;
+  const hasAnsweredCurrent = answers[currentQuestion.id] !== undefined;
+  const progressPercentage = ((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100;
 
   return (
     <div className="w-full max-w-3xl relative mx-auto">
@@ -151,7 +211,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
       {/* STICKY HEADER: Title, Progress, and Timer */}
       <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex justify-between items-center sticky top-4 z-40 border-l-4 border-emerald-500">
         <div>
-          <h2 className="font-bold text-gray-900 text-lg">{quiz.title}</h2>
+          <h2 className="font-bold text-gray-900 text-lg">{activeQuiz.title}</h2>
           <div className="flex items-center gap-2 mt-1">
              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
@@ -160,7 +220,7 @@ const StudentQuizPage = ({ quiz, studentName, onComplete, notify }) => {
                 />
              </div>
              <span className="text-xs text-gray-500">
-               {currentQuestionIndex + 1} of {quiz.questions.length}
+               {currentQuestionIndex + 1} of {activeQuiz.questions.length}
              </span>
           </div>
         </div>
