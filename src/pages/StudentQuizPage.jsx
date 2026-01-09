@@ -1,246 +1,264 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Timer, AlertTriangle, ChevronRight, CheckCircle } from 'lucide-react';
+import { Timer, AlertTriangle, ChevronRight, CheckCircle, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-/**
- * STUDENT QUIZ PAGE COMPONENT
- * Handles the main examination interface including:
- * 1. Real-time countdown timer
- * 2. Anti-cheat detection (Tab switching)
- * 3. One-question-at-a-time navigation
- * 4. Automatic submission on violations or timeout
- * * @param {Object} quiz - The quiz object containing questions and settings
- * @param {string} studentName - The ID/Name of the current student
- * @param {Function} onComplete - Callback to trigger when exam is finished
- */
-const StudentQuizPage = ({ quiz, studentName, onComplete }) => {
+// COMPONENT: StudentQuizPage
+// RESPONSIBILITY: Handles the taking of the quiz, timer logic, and session recovery.
+const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
+  const navigate = useNavigate();
+
+  // =========================================================================
+  // 1. STATE MANAGEMENT
+  // =========================================================================
   
-  // STATE MANAGEMENT
+  // NOTE: We initialize 'activeQuiz' as null. 
+  // PROBLEM FIX: Previously, accessing quiz.questions immediately caused a crash on reload.
+  // SOLUTION: We wait to see if we can recover the session from localStorage first.
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(quiz.duration * 60); // Convert mins to seconds
+  const [timeLeft, setTimeLeft] = useState(0);
   const [violations, setViolations] = useState(0);
-  const [showWarning, setShowWarning] = useState(false);
   
-  // Ref to track exact start time for duration calculation
-  const startTimeRef = useRef(Date.now());
+  // Loading state to prevent rendering UI before data is ready (White Screen Fix)
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Helper variables for UI rendering
-  const currentQuestion = quiz.questions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
-  const hasAnsweredCurrent = answers[currentQuestion.id] !== undefined;
-
-  // --- EFFECT: COUNTDOWN TIMER ---
-  // Decrements time every second and triggers auto-submit when time hits 0
+  // =========================================================================
+  // 2. SESSION RECOVERY LOGIC (The Crash Fix)
+  // =========================================================================
   useEffect(() => {
-    const timer = setInterval(() => {
+    const loadSession = () => {
+      // Check if there is an unfinished session in the browser storage
+      const savedSession = localStorage.getItem('cvsu_quiz_session');
+      
+      if (propQuiz) {
+        // SCENARIO A: Normal Navigation
+        // The user came from the App/Home component properly.
+        // We use the prop and start a fresh session.
+        setActiveQuiz(propQuiz);
+        setTimeLeft(propQuiz.duration * 60);
+        setIsLoading(false);
+      } else if (savedSession) {
+        // SCENARIO B: Page Reload / Crash Recovery
+        // The prop is undefined (because of F5), but we found data in storage.
+        const parsedSession = JSON.parse(savedSession);
+        
+        console.log("Session Restored:", parsedSession); // For debugging
+        
+        // Restore the state exactly as it was
+        setActiveQuiz(parsedSession.quiz);
+        setCurrentQuestionIndex(parsedSession.currentQuestionIndex);
+        setAnswers(parsedSession.answers);
+        setViolations(parsedSession.violations);
+        setTimeLeft(parsedSession.timeLeft); // Resume timer, don't restart it
+        setIsLoading(false);
+      } else {
+        // SCENARIO C: Unauthorized Access
+        // No prop and no saved session. Redirect to home to prevent crash.
+        alert("No active quiz session found. Returning to home.");
+        navigate('/'); 
+      }
+    };
+
+    loadSession();
+  }, [propQuiz, navigate]);
+
+  // =========================================================================
+  // 3. AUTO-SAVE (Session Persistence)
+  // =========================================================================
+  // LOGIC: Every time the student answers or time changes, we save to localStorage.
+  // This ensures that if they crash/reload, we have the latest data in Scenario B above.
+  useEffect(() => {
+    if (activeQuiz) {
+      const sessionData = {
+        quiz: activeQuiz,
+        currentQuestionIndex,
+        answers,
+        violations,
+        timeLeft
+      };
+      localStorage.setItem('cvsu_quiz_session', JSON.stringify(sessionData));
+    }
+  }, [activeQuiz, currentQuestionIndex, answers, violations, timeLeft]);
+
+  // =========================================================================
+  // 4. TIMER LOGIC
+  // =========================================================================
+  useEffect(() => {
+    // Don't start timer until quiz is loaded
+    if (!activeQuiz || timeLeft <= 0) return;
+
+    const timerId = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit(); // Auto-submit action
+          clearInterval(timerId);
+          handleSubmit(true); // Auto-submit when time runs out
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
-  // --- EFFECT: ANTI-CHEAT SECURITY ---
-  // Listens for visibility changes (tab switching/minimizing)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setViolations((prev) => {
-          const newCount = prev + 1;
-          // STRICT RULE: 5 Violations = Instant Fail/Submit
-          if (newCount >= 5) {
-            // FIX: Pass the new count directly to submit so it saves '5' immediately
-            handleSubmit(newCount);
-          } else {
-            setShowWarning(true);
-          }
-          return newCount;
-        });
-      }
+    return () => clearInterval(timerId);
+  }, [activeQuiz, timeLeft]);
+
+  // =========================================================================
+  // 5. EVENT HANDLERS
+  // =========================================================================
+
+  const handleOptionSelect = (optionIndex) => {
+    setAnswers({
+      ...answers,
+      [currentQuestionIndex]: optionIndex
+    });
+  };
+
+  const handleSubmit = (isTimeOut = false) => {
+    // IMPORTANT: Clear the session storage so the user doesn't get stuck 
+    // reloading into an old quiz next time.
+    localStorage.removeItem('cvsu_quiz_session');
+    
+    // Calculate Score
+    let score = 0;
+    activeQuiz.questions.forEach((q, idx) => {
+      if (answers[idx] === q.correct) score++;
+    });
+
+    const results = {
+      quizTitle: activeQuiz.title,
+      score: score,
+      total: activeQuiz.questions.length,
+      violations: violations,
+      studentName: studentName || "Student",
+      date: new Date().toISOString()
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
+
+    // Send results back to parent component (App.jsx)
+    if (onComplete) {
+      onComplete(results);
+    } else {
+      navigate('/');
+    }
+  };
 
   // Helper to format seconds into MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const handleOptionSelect = (qId, optionIndex) => {
-    setAnswers(prev => ({
-      ...prev,
-      [qId]: optionIndex
-    }));
-  };
+  // =========================================================================
+  // 6. RENDER (UI)
+  // =========================================================================
 
-  const handleNext = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    }
-  };
+  // CRITICAL GUARD CLAUSE:
+  // If we are still loading or activeQuiz is null, DO NOT try to render the questions.
+  // This prevents the "Cannot read properties of undefined" White Screen error.
+  if (isLoading || !activeQuiz) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-xl font-bold text-gray-600">Restoring your session...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // --- GUIDE: SUBMISSION HANDLER ---
-  // Calculates score and saves result to DB.
-  const handleSubmit = (finalViolations = null) => {
-    // 1. Calculate Score based on correct answers
-    let score = 0;
-    quiz.questions.forEach(q => {
-      if (answers[q.id] === q.correct) {
-        score++;
-      }
-    });
-
-    // 2. Calculate Total Time Spent
-    const endTime = Date.now();
-    const durationMs = endTime - startTimeRef.current;
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-    const timeSpentString = `${minutes}m ${seconds}s`;
-
-    // 3. Determine correct violation count (Use argument if provided, otherwise use state)
-    const recordedViolations = finalViolations !== null ? finalViolations : violations;
-
-    // 4. Save Attempt Data to LocalStorage (Mock Database)
-    const resultData = {
-      studentName,
-      quizId: quiz.id,
-      score,
-      total: quiz.questions.length,
-      released: false,
-      timestamp: new Date().toISOString(),
-      timeSpent: timeSpentString,
-      violations: recordedViolations // Use the corrected count
-    };
-
-    const existingResults = JSON.parse(localStorage.getItem('cvsu_db_results') || '[]');
-    existingResults.push(resultData);
-    localStorage.setItem('cvsu_db_results', JSON.stringify(existingResults));
-
-    if (onComplete) {
-      onComplete();
-    }
-  };
-
-  // Calculate percentage for progress bar
-  const progressPercentage = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+  // Define current question variables only after the Guard Clause passed
+  const currentQuestion = activeQuiz.questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100;
 
   return (
-    <div className="w-full max-w-3xl relative mx-auto">
-      
-      {/* SECURITY WARNING MODAL */}
-      {showWarning && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm text-center border-4 border-red-500 animate-pulse">
-            <AlertTriangle className="w-16 h-16 text-red-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-red-600 mb-2">WARNING!</h2>
-            <p className="text-gray-800 font-bold mb-4">Tab switching detected!</p>
-            <p className="text-sm text-gray-600 mb-6">
-              Violation <b>{violations}/5</b>. 
-              <br/>Reaching 5 will auto-submit your exam.
-            </p>
-            <button 
-              onClick={() => setShowWarning(false)}
-              className="w-full bg-red-600 text-white py-3 rounded font-bold hover:bg-red-700"
-            >
-              I UNDERSTAND
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STICKY HEADER: Title, Progress, and Timer */}
-      <div className="bg-white p-4 rounded-xl shadow-lg mb-6 flex justify-between items-center sticky top-4 z-40 border-l-4 border-emerald-500">
+    <div className="min-h-screen bg-gray-50 font-sans">
+      {/* Top Header with Timer */}
+      <div className="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center sticky top-0 z-10">
         <div>
-          <h2 className="font-bold text-gray-900 text-lg">{quiz.title}</h2>
-          <div className="flex items-center gap-2 mt-1">
-             <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-300" 
-                  style={{ width: `${progressPercentage}%` }}
-                />
-             </div>
-             <span className="text-xs text-gray-500">
-               {currentQuestionIndex + 1} of {quiz.questions.length}
-             </span>
-          </div>
+          <h1 className="text-xl font-bold text-gray-800">{activeQuiz.title}</h1>
+          <p className="text-sm text-gray-500">Student: {studentName || 'Guest'}</p>
         </div>
         
-        {/* Timer Display - Turns red when under 5 minutes */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold text-xl ${timeLeft < 300 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+        {/* Timer Display */}
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold text-xl ${timeLeft < 60 ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
           <Timer className="w-5 h-5" />
           {formatTime(timeLeft)}
         </div>
       </div>
 
-      {/* QUESTION CARD */}
-      <div className="bg-white rounded-xl shadow-lg p-8 min-h-[400px] flex flex-col justify-between">
-        <div>
-            <h3 className="font-semibold text-xl mb-6 text-gray-800">
-              <span className="text-emerald-600 font-bold mr-2">{currentQuestionIndex + 1}.</span> 
-              {currentQuestion.question}
-            </h3>
+      {/* Progress Bar */}
+      <div className="w-full bg-gray-200 h-2">
+        <div className="bg-green-600 h-2 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+      </div>
 
-            <div className="space-y-3">
-              {currentQuestion.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleOptionSelect(currentQuestion.id, i)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center group ${
-                    answers[currentQuestion.id] === i 
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500 shadow-sm' 
-                      : 'bg-white border-gray-100 hover:border-emerald-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center transition-colors ${
-                    answers[currentQuestion.id] === i 
-                      ? 'border-emerald-600 bg-emerald-600' 
-                      : 'border-gray-300 group-hover:border-emerald-400'
-                  }`}>
-                    {answers[currentQuestion.id] === i && <div className="w-2 h-2 bg-white rounded-full" />}
-                  </div>
-                  <span className="text-lg">{opt}</span>
-                </button>
-              ))}
-            </div>
-        </div>
+      <div className="max-w-4xl mx-auto p-6 mt-6">
+        {/* Anti-Cheat Warning Display */}
+        {violations > 0 && (
+          <div className="mb-6 bg-red-100 border-l-4 border-red-500 p-4 flex items-center text-red-700">
+            <AlertTriangle className="w-5 h-5 mr-2" />
+            <span>Warning: {violations} Violation(s) Detected.</span>
+          </div>
+        )}
 
-        {/* CONTROLS: Next / Submit */}
-        <div className="mt-8 pt-6 border-t flex justify-end">
-          {isLastQuestion ? (
+        {/* Question Card */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="flex justify-between items-start mb-6">
+            <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+              Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
+            </span>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-800 mb-8 leading-relaxed">
+            {currentQuestion.question}
+          </h2>
+
+          <div className="space-y-4">
+            {currentQuestion.options.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleOptionSelect(idx)}
+                className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 flex items-center justify-between group
+                  ${answers[currentQuestionIndex] === idx 
+                    ? 'border-green-600 bg-green-50 text-green-800' 
+                    : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'}`}
+              >
+                <span className="font-medium text-lg">{option}</span>
+                {answers[currentQuestionIndex] === idx && (
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="mt-10 flex justify-between items-center pt-6 border-t">
             <button
-              onClick={() => handleSubmit()} 
-              disabled={!hasAnsweredCurrent}
-              className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold shadow-lg transition-all ${
-                hasAnsweredCurrent 
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 transform active:scale-95' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentQuestionIndex === 0}
+              className={`px-6 py-2 rounded-lg font-medium ${currentQuestionIndex === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              <CheckCircle className="w-5 h-5" />
-              Submit Examination
+              Previous
             </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              disabled={!hasAnsweredCurrent}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-                hasAnsweredCurrent 
-                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Next Question
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
+
+            {currentQuestionIndex === activeQuiz.questions.length - 1 ? (
+              <button
+                onClick={() => handleSubmit(false)}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 transform transition hover:scale-105"
+              >
+                <Save className="w-5 h-5" />
+                Submit Quiz
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 transform transition hover:scale-105"
+              >
+                Next Question
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
