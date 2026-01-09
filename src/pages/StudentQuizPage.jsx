@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Timer, AlertTriangle, ChevronRight, CheckCircle, Save } from 'lucide-react';
+import { Timer, AlertTriangle, ChevronRight, CheckCircle, Save, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // CONFIGURATION
@@ -8,16 +8,19 @@ const MAX_VIOLATIONS = 5; // The limit before auto-kick
 const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
   const navigate = useNavigate();
 
-  // 1. STATE
+  // 1. STATE MANAGEMENT
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [violations, setViolations] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // NEW: State for the Custom Warning Modal
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [isTerminated, setIsTerminated] = useState(false);
 
-  // 2. SUBMISSION LOGIC (Moved up so it can be used by effects)
-  // Wrapped in useCallback to prevent infinite loops in useEffect
+  // 2. SUBMISSION LOGIC
   const handleSubmit = useCallback((forceSubmit = false) => {
     if (!activeQuiz) return;
 
@@ -34,12 +37,12 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
       studentName: studentName || "Student",
       score: score,
       total: activeQuiz.questions.length,
-      violations: forceSubmit ? MAX_VIOLATIONS : violations, // Ensure max is recorded if forced
+      violations: forceSubmit ? MAX_VIOLATIONS : violations,
       date: new Date().toLocaleString(),
       status: forceSubmit ? "Terminated (Cheating)" : "Completed"
     };
 
-    // Save to DB
+    // Save Results
     const existingResults = JSON.parse(localStorage.getItem('cvsu_db_results') || '[]');
     existingResults.push(resultData);
     localStorage.setItem('cvsu_db_results', JSON.stringify(existingResults));
@@ -47,7 +50,6 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
     // Clear Session
     localStorage.removeItem('cvsu_quiz_session');
 
-    // Notify
     if (onComplete) {
       onComplete(resultData);
     } else {
@@ -89,6 +91,7 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
         setIsLoading(false);
       } 
       else {
+        // Fallback for direct URL access without data
         alert("Error: Quiz not found. Returning to home.");
         navigate('/');
       }
@@ -97,47 +100,47 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
     initializeQuiz();
   }, [propQuiz, navigate, studentName]);
 
-  // 4. SECURITY SYSTEM (The Pop-up & Limit Fix)
+  // 4. SECURITY SYSTEM (The Custom Modal Fix)
   useEffect(() => {
-    if (!activeQuiz) return;
+    if (!activeQuiz || isTerminated) return;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        setViolations(prev => prev + 1);
+        setViolations(prev => {
+          const newVal = prev + 1;
+          
+          // TRIGGER THE WARNING MODAL
+          // We do NOT use alert() anymore. We use our custom state.
+          if (newVal < MAX_VIOLATIONS) {
+            setShowWarningModal(true);
+          }
+          return newVal;
+        });
       }
-    };
-
-    const handleBlur = () => {
-       // Optional: setViolations(prev => prev + 1);
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
     };
-  }, [activeQuiz]);
+  }, [activeQuiz, isTerminated]);
 
   // 5. VIOLATION WATCHER (The Kill Switch)
-  // This separate effect watches the violation count specifically.
   useEffect(() => {
-    if (violations > 0) {
-      if (violations >= MAX_VIOLATIONS) {
-        // LIMIT REACHED
-        alert(`SECURITY LOCKOUT: You have exceeded the limit of ${MAX_VIOLATIONS} tab switches. Your quiz is being submitted automatically.`);
-        handleSubmit(true); // Force submit
-      } else {
-        // WARNING POPUP
-        alert(`WARNING: Tab switching is prohibited! (${violations}/${MAX_VIOLATIONS})\nIf you continue, your quiz will be auto-submitted.`);
-      }
+    if (violations >= MAX_VIOLATIONS && !isTerminated) {
+      setIsTerminated(true);
+      setShowWarningModal(true); // Ensure modal is open to show the "Terminated" message
+      
+      // Auto-submit after a brief delay so they see the message
+      setTimeout(() => {
+        handleSubmit(true);
+      }, 3000);
     }
-  }, [violations, handleSubmit]); 
+  }, [violations, handleSubmit, isTerminated]);
 
   // 6. TIMER & AUTO-SAVE
   useEffect(() => {
-    if (!activeQuiz || timeLeft <= 0) return;
+    if (!activeQuiz || timeLeft <= 0 || isTerminated) return;
 
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -160,7 +163,7 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
     localStorage.setItem('cvsu_quiz_session', JSON.stringify(sessionData));
 
     return () => clearInterval(timer);
-  }, [timeLeft, activeQuiz, currentQuestionIndex, answers, violations]);
+  }, [timeLeft, activeQuiz, currentQuestionIndex, answers, violations, isTerminated]);
 
 
   // 7. RENDER
@@ -186,7 +189,53 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 relative">
+      
+      {/* =========================================================================== */}
+      {/* CUSTOM SECURITY MODAL (THE POP UP) */}
+      {/* =========================================================================== */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-8 text-center border-t-8 border-red-600">
+            
+            {violations >= MAX_VIOLATIONS ? (
+              // TERMINATION MESSAGE
+              <>
+                <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                  <XCircle className="w-12 h-12 text-red-600" />
+                </div>
+                <h2 className="text-3xl font-black text-gray-900 mb-2">QUIZ TERMINATED</h2>
+                <p className="text-gray-600 mb-6 text-lg">
+                  You exceeded the limit of <b>{MAX_VIOLATIONS} tab switches.</b><br/>
+                  Your answers are being auto-submitted.
+                </p>
+                <div className="animate-pulse text-sm font-bold text-red-500">
+                  Redirecting...
+                </div>
+              </>
+            ) : (
+              // WARNING MESSAGE
+              <>
+                <div className="mx-auto w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+                  <AlertTriangle className="w-10 h-10 text-amber-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">SECURITY WARNING</h2>
+                <p className="text-gray-600 mb-6">
+                  Tab switching is strictly prohibited.<br/>
+                  You have recorded <b>{violations}</b> out of <b>{MAX_VIOLATIONS}</b> allowed violations.
+                </p>
+                <button 
+                  onClick={() => setShowWarningModal(false)}
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-lg"
+                >
+                  I Understand
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="bg-white shadow px-6 py-4 flex justify-between items-center sticky top-0 z-20">
         <div>
@@ -207,12 +256,13 @@ const StudentQuizPage = ({ quiz: propQuiz, studentName, onComplete }) => {
       </div>
 
       <div className="max-w-3xl mx-auto p-4 md:p-8">
-        {/* VIOLATION BANNER (Visual Backup) */}
+        
+        {/* PERSISTENT VIOLATION BANNER (Top of Quiz) */}
         {violations > 0 && (
-          <div className="mb-6 bg-red-100 border-l-4 border-red-600 p-4 flex items-center justify-between animate-pulse">
+          <div className="mb-6 bg-red-100 border-l-4 border-red-600 p-4 flex items-center justify-between">
             <div className="flex items-center text-red-800 font-bold">
               <AlertTriangle className="w-6 h-6 mr-2" />
-              <span>SECURITY ALERT: {violations} / {MAX_VIOLATIONS} Violations.</span>
+              <span>SECURITY ALERT: {violations} / {MAX_VIOLATIONS} Violations Detected.</span>
             </div>
           </div>
         )}
